@@ -1,0 +1,79 @@
+name: Daily Bid Scraper & Mailer
+
+on:
+  schedule:
+    # Runs at 19:30 UTC (01:00 AM IST)
+    - cron: '30 19 * * *'
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  run-scripts:
+    # Make sure your Gitea runner is configured with the 'ubuntu-latest' label
+    # or change this to the label your runner uses (e.g., 'docker', 'linux').
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Clone the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      # 3. Install System Dependencies for Puppeteer
+      # Gitea runners (unlike GitHub's) are often bare Docker containers 
+      # and might miss the libraries Puppeteer needs.
+      - name: Install Puppeteer Deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates fonts-liberation libasound2 \
+          libatk-bridge2.0-0 libatk1.0-0 libc6 libcairo2 libcups2 libdbus-1-3 \
+          libexpat1 libfontconfig1 libgbm1 libgcc1 libglib2.0-0 libgtk-3-0 \
+          libnspr4 libnss3 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 \
+          libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 \
+          libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 \
+          lsb-release wget xdg-utils
+
+      # 4. Install NPM Dependencies
+      - name: Install Dependencies
+        run: npm ci
+
+      # 5. Run Extract Script (Scraping)
+      - name: Run Extractor
+        run: node 0_extract.js
+        timeout-minutes: 15 
+
+      # 6. Run Mailer Script
+      - name: Run Mailer
+        env:
+          # Ensure this secret is added in your Gitea Repo Settings > Actions > Secrets
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }} 
+        run: node 1_mailer.js
+
+      # 7. Run Excel Generator
+      - name: Generate Excel Report
+        run: node 2_excel.js
+
+      # 8. Commit and Push Changes
+      - name: Commit and Push DB Changes
+        env:
+          # Gitea automatically provides this token (aliased to GITHUB_TOKEN)
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "Gitea Actions"
+          git config --global user.email "actions@gitea.local"
+          
+          # Add the specific files we expect to change
+          git add email_master_db.json bid_history_log.json output_email_db.xlsx
+          
+          # Commit only if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Auto-update: Bid Logs and Email DB [skip ci]"
+            git push
+          fi

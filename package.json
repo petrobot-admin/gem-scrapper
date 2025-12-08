@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "pdf-extraction": "^1.0.2",
+    "pdfjs-dist": "^5.4.449",
+    "puppeteer": "^24.32.0",
+    "xlsx": "^0.18.5"
+  }
+}

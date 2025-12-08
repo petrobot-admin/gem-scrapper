@@ -1,0 +1,2 @@
+npm install pdf-extraction pdfjs-dist
+npm install puppeteer
