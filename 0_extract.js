@@ -229,7 +229,12 @@ async function processSingleBid(linkObj, page, urlDb) {
     
     const browser = await puppeteer.launch({
         headless: "new",
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--start-maximized']
+        args: [
+            '--no-sandbox',               // Required for running as root in Docker/CI
+            '--disable-setuid-sandbox',   // Required for running as root in Docker/CI
+            '--disable-dev-shm-usage',    // Fixes crash on limited memory/shared memory
+            '--disable-gpu'               // Saves resources in headless mode
+        ]
     });
     const page = await browser.newPage();
     
