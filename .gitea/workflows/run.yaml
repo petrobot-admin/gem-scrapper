@@ -2,8 +2,9 @@ name: Daily Bid Scraper & Mailer
 
 on:
   schedule:
-    # Runs at 19:30 UTC (01:00 AM IST)
-    - cron: '30 19 * * *'
+    # Runs at 8PM, 10PM, 2AM, 4AM, and 6AM (IST)
+    # Converted to UTC: 14:30, 16:30, 20:30, 22:30, 00:30
+    - cron: '30 0,14,16,20,22 * * *'
   workflow_dispatch: # Allows manual trigger
 
 jobs:
@@ -45,7 +46,7 @@ jobs:
       # 5. Run Extract Script (Scraping)
       - name: Run Extractor
         run: node 0_extract.js
-        timeout-minutes: 15 
+        timeout-minutes: 60 
 
       # 6. Run Mailer Script
       - name: Run Mailer
@@ -53,6 +54,7 @@ jobs:
           # Ensure this secret is added in your Gitea Repo Settings > Actions > Secrets
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }} 
         run: node 1_mailer.js
+        timeout-minutes: 5 
 
       # 7. Run Excel Generator
       - name: Generate Excel Report
@@ -68,7 +70,7 @@ jobs:
           git config --global user.email "actions@gitea.local"
           
           # Add the specific files we expect to change
-          git add email_master_db.json bid_history_log.json output_email_db.xlsx
+          git add .
           
           # Commit only if there are changes
           if git diff --staged --quiet; then

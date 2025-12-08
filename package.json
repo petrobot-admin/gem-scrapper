@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "inquirer": "^8.2.7",
     "pdf-extraction": "^1.0.2",
     "pdfjs-dist": "^5.4.449",
     "puppeteer": "^24.32.0",

@@ -3,7 +3,8 @@ const XLSX = require('xlsx');
 
 // --- CONFIGURATION ---
 const INPUT_FILE = 'email_master_db.json';
-const OUTPUT_FILE = 'output_email_db.xlsx';
+const CONFIG_FILE = 'mailer_config.json'; // <--- Reads your interest list
+const OUTPUT_FILE = 'output_interested_emails.xlsx';
 
 // --- HELPER: SANITIZE SHEET NAMES ---
 function sanitizeSheetName(domain) {
@@ -13,28 +14,20 @@ function sanitizeSheetName(domain) {
 }
 
 // --- HELPER: STRICT EMAIL VALIDATION ---
-// This filters out bonus@8.33, pmsby@rs.436.00, 0.0005lux@f1.6 etc.
 function isValidEmail(email) {
     if (!email || typeof email !== 'string') return false;
-    
     const cleanEmail = email.trim();
-
-    // 1. Regex Rule: 
-    // - Must end with .[Letters]
-    // - Extension must be at least 2 characters
-    // - No numbers allowed after the last dot
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     
+    // Regex: Standard email validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(cleanEmail)) return false;
 
-    // 2. Double Check for Hidden Numbers in Extension 
-    // (catches cases like "user@domain.3days")
+    // Logic: No numbers in TLD (e.g., .3days)
     const parts = cleanEmail.split('.');
     const tld = parts[parts.length - 1];
-    
     if (/[0-9]/.test(tld)) return false; 
 
-    // 3. Filter out common image extensions if they got in
+    // Logic: No image extensions
     const junkExtensions = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'pdf'];
     if (junkExtensions.includes(tld.toLowerCase())) return false;
 
@@ -43,70 +36,91 @@ function isValidEmail(email) {
 
 // --- MAIN FUNCTION ---
 function exportToExcel() {
-    console.log('--- Starting Export Process ---');
+    console.log('--- Starting Export Process (Interested Domains Only) ---');
 
-    // 1. Check if DB exists
-    if (!fs.existsSync(INPUT_FILE)) {
-        console.error(`[Error] File not found: ${INPUT_FILE}`);
+    // 1. Load Interested Domains Config
+    let targetDomains = [];
+    if (fs.existsSync(CONFIG_FILE)) {
+        try {
+            const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+            targetDomains = config.selectedDomains || [];
+            console.log(`[Config] Found ${targetDomains.length} interested domains.`);
+        } catch (e) {
+            console.error('[Error] Could not read config file.');
+            return;
+        }
+    } else {
+        console.error(`[Error] Config file (${CONFIG_FILE}) not found. Please run the manager script first.`);
         return;
     }
 
-    // 2. Load JSON Data
+    if (targetDomains.length === 0) {
+        console.log('[Warning] No interested domains selected in config. Nothing to export.');
+        return;
+    }
+
+    // 2. Load Email DB
+    if (!fs.existsSync(INPUT_FILE)) {
+        console.error(`[Error] Database file not found: ${INPUT_FILE}`);
+        return;
+    }
+
     let rawData = {};
     try {
-        const fileContent = fs.readFileSync(INPUT_FILE, 'utf8');
-        rawData = JSON.parse(fileContent);
+        rawData = JSON.parse(fs.readFileSync(INPUT_FILE, 'utf8'));
     } catch (e) {
-        console.error('[Error] Could not parse JSON:', e.message);
+        console.error('[Error] Could not parse JSON DB:', e.message);
         return;
     }
 
-    const totalEmails = Object.keys(rawData).length;
-    console.log(`Loaded ${totalEmails} raw entries.`);
-
-    // 3. Group Data by Domain (With Filtering)
+    // 3. Filter and Group Data
     const domainGroups = {};
-    let skippedCount = 0;
-    let validCount = 0;
+    let counts = { valid: 0, invalid: 0, ignored: 0 };
 
     Object.values(rawData).forEach(entry => {
         const email = entry.email || "";
-        
-        // *** NEW FILTERING LOGIC ***
+
         if (isValidEmail(email)) {
             const domain = email.split('@')[1].trim().toLowerCase();
-            
-            if (!domainGroups[domain]) {
-                domainGroups[domain] = [];
-            }
 
-            domainGroups[domain].push({
-                "Email Address": entry.email,
-                "Date Added": entry.dateAdded,
-                "Mails Sent": entry.noOfMailSend,
-                "Last Sent Date": entry.LastMailSended || "Never"
-            });
-            validCount++;
+            // *** CRITICAL CHANGE: FILTER BY INTEREST ***
+            if (targetDomains.includes(domain)) {
+                
+                if (!domainGroups[domain]) {
+                    domainGroups[domain] = [];
+                }
+
+                domainGroups[domain].push({
+                    "Email Address": entry.email,
+                    "Date Added": entry.dateAdded,
+                    "Mails Sent": entry.noOfMailSend,
+                    "Last Sent Date": entry.LastMailSended || "Never"
+                });
+                counts.valid++;
+
+            } else {
+                // Email is valid, but not in our interest list
+                counts.ignored++;
+            }
         } else {
-            // Log skipped items to console so you can verify
-            console.log(`   [Skipped Invalid]: ${email}`);
-            skippedCount++;
+            counts.invalid++;
         }
     });
 
-    console.log(`\nSummary: ${validCount} Valid Emails | ${skippedCount} Invalid/Junk Removed`);
+    console.log(`\n--- SUMMARY ---`);
+    console.log(`✅ Included (Interested): ${counts.valid}`);
+    console.log(`🚫 Ignored (Not Interested): ${counts.ignored}`);
+    console.log(`🗑️  Invalid/Junk Removed:   ${counts.invalid}`);
     
-    const uniqueDomains = Object.keys(domainGroups).length;
-    console.log(`Grouping into ${uniqueDomains} unique domains...`);
-
     // 4. Create Workbook
     const workbook = XLSX.utils.book_new();
     let sheetNameCounts = {}; 
+    let sheetsCreated = 0;
 
-    // 5. Create Worksheet for each Domain
     for (const [domain, rows] of Object.entries(domainGroups)) {
         let sheetName = sanitizeSheetName(domain);
 
+        // Handle duplicate sheet names (Excel restriction)
         if (sheetNameCounts[sheetName]) {
             sheetNameCounts[sheetName]++;
             sheetName = `${sheetName.substring(0, 28)}_${sheetNameCounts[sheetName]}`;
@@ -116,26 +130,26 @@ function exportToExcel() {
 
         const worksheet = XLSX.utils.json_to_sheet(rows);
 
-        const colWidth = [
-            { wch: 35 }, 
-            { wch: 25 }, 
-            { wch: 10 }, 
-            { wch: 25 }  
-        ];
-        worksheet['!cols'] = colWidth;
+        // Set column widths
+        worksheet['!cols'] = [{ wch: 35 }, { wch: 25 }, { wch: 10 }, { wch: 25 }];
 
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+        sheetsCreated++;
     }
 
-    // 6. Write File
-    try {
-        XLSX.writeFile(workbook, OUTPUT_FILE);
-        console.log(`\n[SUCCESS] Excel file created: ${OUTPUT_FILE}`);
-    } catch (e) {
-        console.error(`[Error] Could not save Excel file. Is it currently open?`);
-        console.error(e.message);
+    // 5. Write File
+    if (sheetsCreated > 0) {
+        try {
+            XLSX.writeFile(workbook, OUTPUT_FILE);
+            console.log(`\n[SUCCESS] Excel file created: ${OUTPUT_FILE}`);
+            console.log(`[Info] Contains ${sheetsCreated} sheets (one per domain).`);
+        } catch (e) {
+            console.error(`[Error] Could not save Excel file. Close it if it is open.`);
+        }
+    } else {
+        console.log(`\n[Info] No matching emails found to export.`);
     }
 }
 
-// Run the function
+// Run
 exportToExcel();

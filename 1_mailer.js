@@ -1,121 +1,127 @@
 const fs = require('fs');
-const path = require('path');
 
 // --- CONFIGURATION ---
 const EMAIL_DB_FILE = 'email_master_db.json';
-const WEBHOOK_URL = process.env.WEBHOOK_URL || ""; // <--- REPLACE THIS
+const CONFIG_FILE = 'mailer_config.json';
+const WEBHOOK_URL = process.env.WEBHOOK_URL || "https://n8n.petrobot.in/webhook/f44185c4-da60-4386-87c3-c8c1b6661a05"; 
 const DAYS_GAP = 10;
 const MAX_MAILS = 4;
-const DELAY_MS = 500;
 
-// Helper: Calculate days difference
+// --- HELPERS ---
+const getDomain = (email) => email && email.includes('@') ? email.split('@')[1].toLowerCase() : null;
+
 function getDaysDifference(lastDateString) {
     if (!lastDateString) return 999; 
     const lastDate = new Date(lastDateString);
     const currentDate = new Date();
-    const diffTime = Math.abs(currentDate - lastDate);
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    return Math.ceil(Math.abs(currentDate - lastDate) / (1000 * 60 * 60 * 24)); 
 }
 
-// Helper: Send Mail via Webhook
-async function sendMailWebhook(email) {
+// Function to send the array directly
+async function sendBatchWebhook(emailArray) {
     try {
-        const payload = {
-            mail_address: email
-        };
+        console.log(`[...] Sending batch of ${emailArray.length} emails...`);
+        
+        // We calculate the JSON string here to log it and send it
+        // format: ["email1", "email2"]
+        const jsonPayload = JSON.stringify(emailArray);
+        
+        console.log(`Payload: ${jsonPayload}`); // Shows [ "a", "b" ]
 
         const response = await fetch(WEBHOOK_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
+            headers: { 'Content-Type': 'application/json' },
+            body: jsonPayload // Sending raw array as the body
         });
-
+        
         if (response.ok) {
-            console.log(`   [SUCCESS] Mail sent to: ${email}`);
+            console.log("[OK] Webhook accepted the data.");
             return true;
         } else {
-            console.error(`   [FAILED] Webhook error for ${email}: ${response.status} ${response.statusText}`);
+            console.error(`[!] Webhook failed: ${response.status} ${response.statusText}`);
             return false;
         }
-    } catch (error) {
-        console.error(`   [ERROR] Network error for ${email}:`, error.message);
-        return false;
+    } catch (error) { 
+        console.error("[!] Network/Fetch Error:", error);
+        return false; 
     }
 }
 
-// --- MAIN LOGIC ---
+// --- MAIN EXECUTION ---
 (async () => {
-    console.log("--- Starting Mailer Service ---");
+    console.log(`\n--- STARTING AUTOMATED MAILER (JSON LIST) ---`);
+    console.log(`Time: ${new Date().toLocaleString()}`);
 
-    // 1. Load Database
-    if (!fs.existsSync(EMAIL_DB_FILE)) {
-        console.error("Error: Database file not found.");
-        return;
+    // 1. Load Config
+    if (!fs.existsSync(CONFIG_FILE)) {
+        console.error("[!] Error: Configuration file not found. Run mailer_manager.js first.");
+        process.exit(1);
     }
+    const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
     
-    let emailDb = {};
-    try {
-        emailDb = JSON.parse(fs.readFileSync(EMAIL_DB_FILE, 'utf8'));
-    } catch (e) {
-        console.error("Error parsing JSON:", e);
+    if (!config.selectedDomains || config.selectedDomains.length === 0) {
+        console.log("[!] No domains selected in config. Nothing to do.");
         return;
     }
+    console.log(`Targeting Domains: ${config.selectedDomains.join(', ')}`);
+
+    // 2. Load DB
+    if (!fs.existsSync(EMAIL_DB_FILE)) {
+        console.error("[!] Error: Database file not found.");
+        return;
+    }
+    let emailDb = JSON.parse(fs.readFileSync(EMAIL_DB_FILE, 'utf8'));
+    
+    // 3. Process & Collect
+    const emailsToSend = []; // Array of strings
+    const emailsToUpdate = []; // References to DB objects
 
     const allEmails = Object.keys(emailDb);
-    console.log(`Loaded ${allEmails.length} emails. Checking rules...`);
-    
-    let emailsSentCount = 0;
-    let dbModified = false;
 
-    // 2. Iterate through emails
-    for (const emailKey of allEmails) {
-        let entry = emailDb[emailKey];
+    for (const key of allEmails) {
+        let entry = emailDb[key];
+        const domain = getDomain(entry.email);
+
+        if (!config.selectedDomains.includes(domain)) continue;
+
         let shouldSend = false;
 
-        // --- RULE 1: First Time Sending (NoOfMail is 0) ---
+        // Rules
         if (entry.noOfMailSend === 0) {
             shouldSend = true;
-            console.log(`-> Candidate (First Contact): ${entry.email}`);
-        } 
-        
-        // --- RULE 2: Follow Up (>10 Days gap AND Sent < 4 times) ---
-        else if (entry.noOfMailSend < MAX_MAILS) {
-            const daysSinceLast = getDaysDifference(entry.LastMailSended);
-            
-            if (daysSinceLast > DAYS_GAP) {
+        } else if (entry.noOfMailSend < MAX_MAILS) {
+            const days = getDaysDifference(entry.LastMailSended);
+            if (days > DAYS_GAP) {
                 shouldSend = true;
-                console.log(`-> Candidate (Follow-up): ${entry.email} | Last sent: ${daysSinceLast} days ago`);
             }
         }
 
-        // --- ACTION: SEND AND UPDATE ---
+        // Collect
         if (shouldSend) {
-            // Send the mail
-            const wasSent = await sendMailWebhook(entry.email);
-
-            if (wasSent) {
-                // Update Logic
-                entry.noOfMailSend = entry.noOfMailSend + 1;
-                entry.LastMailSended = new Date().toISOString();
-                
-                dbModified = true;
-                emailsSentCount++;
-            }
-            
-            // *** WAIT 0.5 SECONDS BETWEEN CALLS ***
-            // This runs regardless of success or failure
-            await new Promise(r => setTimeout(r, DELAY_MS)); 
+            emailsToSend.push(entry.email); 
+            emailsToUpdate.push(entry);
         }
     }
 
-    // 3. Save Changes
-    if (dbModified) {
+    if (emailsToSend.length === 0) {
+        console.log("No emails meet the criteria for sending.");
+        return;
+    }
+
+    // 4. Send & Update
+    // passing the array: ["a@b.com", "c@d.com"]
+    const success = await sendBatchWebhook(emailsToSend);
+
+    if (success) {
+        emailsToUpdate.forEach(entry => {
+            entry.noOfMailSend++;
+            entry.LastMailSended = new Date().toISOString();
+        });
+
         fs.writeFileSync(EMAIL_DB_FILE, JSON.stringify(emailDb, null, 2));
-        console.log(`\n--- COMPLETE: Sent ${emailsSentCount} emails. Database updated. ---`);
+        console.log(`\n--- COMPLETE: Sent ${emailsToSend.length} emails. Database updated. ---`);
     } else {
-        console.log(`\n--- COMPLETE: No emails matched the sending criteria. ---`);
+        console.log(`\n--- FAILED: Database NOT updated due to webhook error. ---`);
     }
 
 })();
