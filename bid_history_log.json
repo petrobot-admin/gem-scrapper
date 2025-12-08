@@ -55323,5 +55323,59 @@
       "isRelated": true,
       "summary": " | (Linked): "
     }
+  },
+  "https://bidplus.gem.gov.in/showbidDocument/8616250": {
+    "timestamp": 1765227108826,
+    "bidNumber": "GEM/2025/B/6915573",
+    "originalFileName": "bid_GEM_2025_B_6915573_1765227105790.pdf",
+    "status": "complete",
+    "extractedData": {
+      "pdfLinks": [
+        "https://bidplus.gem.gov.in/bidding/bid/downloadMseMiiDoc/8616250/1763699004.pdf",
+        "https://bidplus.gem.gov.in/bidding/bid/downloadMseMiiDoc/8616250/1763698967.pdf",
+        "https://mkp.gem.gov.in/catalog_data/catalog_support_document/buyer_documents/19362493/54/78/703/CatalogAttrs/SpecificationDocument/2025/11/20/new_rfq_2025-11-20-16-39-55_2538a9ac3bfcb273f3f53d906c605499.pdf",
+        "https://assets-bg.gem.gov.in/resources/upload/shared_doc/list-of-categories-where-trials-are-allowed_1712126171.pdf"
+      ],
+      "allEmails": [
+        "borah_r@indianoil.in"
+      ]
+    },
+    "inspectionAnalysis": {
+      "isRelated": true,
+      "summary": " | (Linked): "
+    }
+  },
+  "https://bidplus.gem.gov.in/showbidDocument/8686987": {
+    "timestamp": 1765227337490,
+    "bidNumber": "GEM/2025/B/6977181",
+    "originalFileName": "bid_GEM_2025_B_6977181_1765227333949.pdf",
+    "status": "complete",
+    "extractedData": {
+      "pdfLinks": [
+        "https://bidplus.gem.gov.in/resources/upload_nas/DecQ425/bidding/biddoc/bid-8686987/1765217963.pdf",
+        "https://bidplus.gem.gov.in/resources/upload_nas/DecQ425/bidding/biddoc/bid-8686987/1765217973.pdf",
+        "https://assets-bg.gem.gov.in/resources/upload/shared_doc/list-of-categories-where-trials-are-allowed_1712126171.pdf"
+      ],
+      "allEmails": [
+        "hkelothu@hpcl.in",
+        "bogivbhaskar@hpcl.in",
+        "userhelpdesk_ss@mail.hpcl.co.in",
+        "tpthelp@mail.hpcl.co.in",
+        "pcbhelp@mail.hpcl.co.in",
+        "rentals@mail.hpcl.co.in",
+        "utilitypayments@mail.hpcl.co.in",
+        "bgifs@mail.hpcl.co.in",
+        "testpayment@mail.hpcl.co.in",
+        "cngpayment@mail.hpcl.co.in",
+        "hpclgstmismatch1@mail.hpcl.co.in",
+        "ifsreimbursements@mail.hpcl.co.in",
+        "msivaprasad@hpcl.co.in",
+        "satyamurthyv@hpcl.co.in"
+      ]
+    },
+    "inspectionAnalysis": {
+      "isRelated": true,
+      "summary": " | (Linked): Condition of petrol tank and its cap must be checked for any fuel leakage d. ... Observe for any leakage of petrol from machine body. ... Vulnerability Atlas of India (VAI) is a comprehensive document which provides existing hazard scenario for the entire country and presents the digitized State/UT - wise hazard, maps with respect to earthquakes, winds and floods for district-wise identification of vulnerable areas. | (Linked): "
+    }
   }
 }
