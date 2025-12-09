@@ -2,21 +2,21 @@ name: Daily Bid Scraper & Mailer
 
 on:
   schedule:
-    # Runs at 8PM, 10PM, 2AM, 4AM, and 6AM (IST)
-    # Converted to UTC: 14:30, 16:30, 20:30, 22:30, 00:30
-    - cron: '30 0,14,16,20,22 * * *'
+    # Runs every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
+    # IST (UTC+5:30): 05:30, 11:30, 17:30, 23:30
+    - cron: '0 */6 * * *'
   workflow_dispatch: # Allows manual trigger
 
 jobs:
   run-scripts:
-    # Make sure your Gitea runner is configured with the 'ubuntu-latest' label
-    # or change this to the label your runner uses (e.g., 'docker', 'linux').
     runs-on: ubuntu-latest
     
     steps:
-      # 1. Clone the repository
+      # 1. Clone the specific 'latest' branch
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: latest # Explicitly checkout the branch named 'latest'
 
       # 2. Setup Node.js
       - name: Setup Node.js
@@ -25,11 +25,11 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      # 3. Install NPM Dependencies first (to get the 'puppeteer' binary)
+      # 3. Install NPM Dependencies
       - name: Install Dependencies
         run: npm ci
 
-      # 4. Install System Dependencies Manually (Ubuntu 24.04 Fix)
+      # 4. Install System Dependencies (Ubuntu Puppeteer Support)
       - name: Install System Dependencies
         run: |
           sudo apt-get update
@@ -42,7 +42,7 @@ jobs:
           libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 \
           lsb-release wget xdg-utils
 
-      # 5. Run Extract Script (Scraping)
+      # 5. Run Extract Script
       - name: Run Extractor
         run: node 0_extract.js
         timeout-minutes: 60 
@@ -50,7 +50,6 @@ jobs:
       # 6. Run Mailer Script
       - name: Run Mailer
         env:
-          # Ensure this secret is added in your Gitea Repo Settings > Actions > Secrets
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }} 
         run: node 1_mailer.js
         timeout-minutes: 5 
@@ -59,22 +58,23 @@ jobs:
       - name: Generate Excel Report
         run: node 2_excel.js
 
-      # 8. Commit and Push Changes
+      # 8. Commit and Push to 'latest' branch
       - name: Commit and Push DB Changes
         env:
-          # Gitea automatically provides this token (aliased to GITHUB_TOKEN)
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name "Gitea Actions"
           git config --global user.email "actions@gitea.local"
           
-          # Add the specific files we expect to change
+          # Add all changes
           git add .
           
-          # Commit only if there are changes
+          # Check for changes
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
             git commit -m "Auto-update: Bid Logs and Email DB [skip ci]"
-            git push
+            
+            # PUSH TIP: explicitly push HEAD to the 'latest' branch on origin
+            git push origin HEAD:latest
           fi
