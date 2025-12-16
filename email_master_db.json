@@ -17104,5 +17104,17 @@
     "dateAdded": "2025-12-15T18:33:52.086Z",
     "noOfMailSend": 0,
     "LastMailSended": null
+  },
+  "jaiswalankit@indianoil.in": {
+    "email": "jaiswalankit@indianoil.in",
+    "dateAdded": "2025-12-16T00:30:17.411Z",
+    "noOfMailSend": 1,
+    "LastMailSended": "2025-12-16T00:32:37.306Z"
+  },
+  "alankit@indianoil.in": {
+    "email": "alankit@indianoil.in",
+    "dateAdded": "2025-12-16T00:30:17.411Z",
+    "noOfMailSend": 1,
+    "LastMailSended": "2025-12-16T00:32:37.306Z"
   }
 }
