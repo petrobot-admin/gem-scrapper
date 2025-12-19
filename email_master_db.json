@@ -13610,8 +13610,8 @@
   "bogivbhaskar@hpcl.in": {
     "email": "bogivbhaskar@hpcl.in",
     "dateAdded": "2025-12-08T20:55:37.488Z",
-    "noOfMailSend": 1,
-    "LastMailSended": "2025-12-08T20:55:45.025Z"
+    "noOfMailSend": 2,
+    "LastMailSended": "2025-12-19T00:33:14.456Z"
   },
   "kshetrimayums@indianoil.in": {
     "email": "kshetrimayums@indianoil.in",
@@ -21370,5 +21370,53 @@
     "dateAdded": "2025-12-18T18:34:26.838Z",
     "noOfMailSend": 1,
     "LastMailSended": "2025-12-18T18:34:48.498Z"
+  },
+  "k_vishnu@ongc.co.in": {
+    "email": "k_vishnu@ongc.co.in",
+    "dateAdded": "2025-12-19T00:30:44.589Z",
+    "noOfMailSend": 1,
+    "LastMailSended": "2025-12-19T00:33:14.456Z"
+  },
+  "cpaparatey_vk@ongc.co.in": {
+    "email": "cpaparatey_vk@ongc.co.in",
+    "dateAdded": "2025-12-19T00:30:44.593Z",
+    "noOfMailSend": 1,
+    "LastMailSended": "2025-12-19T00:33:14.456Z"
+  },
+  "hugunaseema@gmail.com": {
+    "email": "hugunaseema@gmail.com",
+    "dateAdded": "2025-12-19T00:30:44.593Z",
+    "noOfMailSend": 0,
+    "LastMailSended": null
+  },
+  "kumar4_vikas@ongc.co.in": {
+    "email": "kumar4_vikas@ongc.co.in",
+    "dateAdded": "2025-12-19T00:31:30.347Z",
+    "noOfMailSend": 1,
+    "LastMailSended": "2025-12-19T00:33:14.456Z"
+  },
+  "varun.n@gail.co.in": {
+    "email": "varun.n@gail.co.in",
+    "dateAdded": "2025-12-19T00:31:42.950Z",
+    "noOfMailSend": 1,
+    "LastMailSended": "2025-12-19T00:33:14.456Z"
+  },
+  "ashish.goel@gail.co": {
+    "email": "ashish.goel@gail.co",
+    "dateAdded": "2025-12-19T00:31:42.950Z",
+    "noOfMailSend": 0,
+    "LastMailSended": null
+  },
+  "lavanya.godde@gail.co.in": {
+    "email": "lavanya.godde@gail.co.in",
+    "dateAdded": "2025-12-19T00:32:24.284Z",
+    "noOfMailSend": 1,
+    "LastMailSended": "2025-12-19T00:33:14.456Z"
+  },
+  "dsd04504@gail.co.in": {
+    "email": "dsd04504@gail.co.in",
+    "dateAdded": "2025-12-19T00:32:24.284Z",
+    "noOfMailSend": 1,
+    "LastMailSended": "2025-12-19T00:33:14.456Z"
   }
 }
